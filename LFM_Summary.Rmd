@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(plotrix)
 library(reactable)
-library(grid)
+library(gridExtra)
 ```
 
 # Introduction
