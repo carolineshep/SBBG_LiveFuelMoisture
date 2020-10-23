@@ -1813,8 +1813,8 @@ Collection date,Site,Subsite,Species,Growth Stage,Replicate,Wet weight in canist
 2019-10-15,St Mary's,,CEME,,Sample #2,113.9,97.7,67.3,46.6,30.4,16.2,0.53289,
 2019-10-15,St Mary's,,CEME,,Sample #3,108,93.9,67.8,40.2,26.1,14.1,0.54023,
 2019-10-15,St Mary's,,CEME,,Sample #4,111.2,94.9,67.2,44,27.7,16.3,0.58845,
-2020-06-26,Painted Cave,PC - Living Room,ADFA,,1,103.2,88.5,67.6,35.6,20.9,14.7,0.7033,Yes
-2020-06-26,Painted Cave,PC - Living Room,ADFA,,2,120,98,67.5,52.5,30.5,22,0.7213,Yes
+2020-06-26,Painted Cave,PC - Living Room,ADFA,,1,103.2,88.5,67.6,35.6,20.9,14.7,0.7033,No
+2020-06-26,Painted Cave,PC - Living Room,ADFA,,2,120,98,67.5,52.5,30.5,22,0.7213,No
 2020-06-26,Painted Cave,PC - Living Room,CEME,,1,136.3,101.5,68.1,68.2,33.4,34.8,1.0419,No
 2020-06-26,Painted Cave,PC - Living Room,CEME,,2,120.8,94.4,67.9,52.9,26.5,26.4,0.9962,No
 2020-06-26,Painted Cave,PC - Lower Loop,ADFA,,1,69.8,56.7,37.9,31.9,18.8,13.1,0.6968,No
@@ -1892,3 +1892,14 @@ Collection date,Site,Subsite,Species,Growth Stage,Replicate,Wet weight in canist
 2020-10-05,Painted Cave,PC - LS,ADFA,,2,98.4,84.5,67,31.4,17.5,13.9,0.794285714,No
 2020-10-05,Painted Cave,PC - LS,ADFA,,3,93.4,84.2,66.8,26.6,17.4,9.2,0.528735632,No
 2020-10-05,Painted Cave,PC - LS,ADFA,,4,91.1,82.3,66.7,24.4,15.6,8.8,0.564102564,No
+2020-10-19,Painted Cave,PC - Living Room,ADFA,,1,96.7,85.1,67.6,29.1,17.5,11.6,0.662857143,No
+2020-10-19,Painted Cave,PC - Living Room,ADFA,,2,109.7,94.4,67.5,42.2,26.9,15.3,0.568773234,No
+2020-10-19,Painted Cave,PC - Living Room,CEME,,1,96.4,85.8,68.1,28.3,17.7,10.6,0.598870056,No
+2020-10-19,Painted Cave,PC - Living Room,CEME,,2,91.6,83.1,67.8,23.8,15.3,8.5,0.555555556,No
+2020-10-19,Painted Cave,PC - Lower Loop,ADFA,,1,91,82.6,66.9,24.1,15.7,8.4,0.535031847,No
+2020-10-19,Painted Cave,PC - Lower Loop,ADFA,,2,96.9,86.7,67.7,29.2,19,10.2,0.536842105,No
+2020-10-19,Painted Cave,PC - Lower Loop,CEME,,1,131.2,109.1,67.7,63.5,41.4,22.1,0.533816425,No
+2020-10-19,Painted Cave,PC - LS,ADFA,,1,92.9,83.6,66.3,26.6,17.3,9.3,0.537572254,No
+2020-10-19,Painted Cave,PC - LS,ADFA,,2,97.5,86.8,67.1,30.4,19.7,10.7,0.543147208,No
+2020-10-19,Painted Cave,PC - LS,ADFA,,3,95.9,85.8,66.8,29.1,19,10.1,0.531578947,No
+2020-10-19,Painted Cave,PC - LS,ADFA,,4,95.7,85,66.7,29,18.3,10.7,0.584699454,No
