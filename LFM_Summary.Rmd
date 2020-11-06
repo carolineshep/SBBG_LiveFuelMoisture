@@ -288,8 +288,8 @@ LFM2020_small <- ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = 
 
 ## change date in filename each time
 
-ggsave(plot = LFM2020_big, filename = "Figures/LFM_2020_10_05_Big.png", height = 8.5, width = 11, units = "in", dpi = 300)
-ggsave(plot = LFM2020_small, filename = "Figures/LFM_2020_10_05_Small.png", height = 4, width = 6, units = "in", dpi = 300)
+ggsave(plot = LFM2020_big, filename = "Figures/LFM_2020_10_19_Big.png", height = 8.5, width = 11, units = "in", dpi = 300)
+ggsave(plot = LFM2020_small, filename = "Figures/LFM_2020_10_19_Small.png", height = 4, width = 6, units = "in", dpi = 300)
 
 
 ```
