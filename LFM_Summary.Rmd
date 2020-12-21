@@ -63,7 +63,7 @@ ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = Subsite, group = 
        title = "Live Fuel Moisture Conditions") +
   scale_y_continuous(limits = c(0,110), expand = c(0,0), breaks=seq (0,200,10)) +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = -45, vjust = -0.5, hjust = 0.5)) +
+  theme(axis.text.x = element_text(angle = -90, vjust = 0.25, hjust = 0.25)) +
   facet_wrap(~Species)
 
 reactable(LFM_summary <- LFM_2020 %>%
@@ -288,8 +288,8 @@ LFM2020_small <- ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = 
 
 ## change date in filename each time
 
-ggsave(plot = LFM2020_big, filename = "Figures/LFM_2020_10_19_Big.png", height = 8.5, width = 11, units = "in", dpi = 300)
-ggsave(plot = LFM2020_small, filename = "Figures/LFM_2020_10_19_Small.png", height = 4, width = 6, units = "in", dpi = 300)
+ggsave(plot = LFM2020_big, filename = "Figures/LFM_2020_12_14_Big.png", height = 8.5, width = 11, units = "in", dpi = 300)
+ggsave(plot = LFM2020_small, filename = "Figures/LFM_2020_12_14_Small.png", height = 4, width = 6, units = "in", dpi = 300)
 
 
 ```
