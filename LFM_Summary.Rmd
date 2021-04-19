@@ -14,6 +14,7 @@ library(plotrix)
 library(reactable)
 library(gridExtra)
 library(lubridate)
+
 ```
 
 # Introduction
@@ -31,7 +32,8 @@ LFM_raw <- read.csv("LFM_PaintedCave.csv") %>%
                                  "ADFA" = "Chamise",
                                  "CEME" = "Bigpod ceanothus")) %>%
   mutate(week = week(Collection.date)) %>%
-  mutate(fct_recode(Subsite, "Unknown" = ""))
+  mutate(recode_factor(Subsite, "Unknown" = "")) %>%
+  rename(dry.weight = Dry.weight.in.canstier)
 
 LFM <- LFM_raw %>%
   filter(Concern != "Yes",
@@ -47,10 +49,10 @@ LFM <- LFM_raw %>%
 # Current conditions 
 Here are the current conditions at Painted Cave. At some sites, only one sample is collected and there are no error bars. For sites with error bars, these represent the standard error.
 
-```{r Graph of current conditions, echo=FALSE}
+```{r Graph of current conditions}
 LFM_2020 <- LFM %>%
   separate(Collection.date, sep = "-", into = c("year", "month", "day")) %>%
-  filter(year == "2020",
+  filter(year == "2020" | year == "2021",
          Site == "Painted Cave") %>%
   unite(Collection.date, "year", "month", "day", sep = "-") 
         
@@ -61,17 +63,21 @@ ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = Subsite, group = 
   labs(x = "Collection date",
        y = "Live Fuel Mositure Content (%)",
        title = "Live Fuel Moisture Conditions") +
-  scale_y_continuous(limits = c(0,110), expand = c(0,0), breaks=seq (0,200,10)) +
+  scale_y_continuous(limits = c(0,130), expand = c(0,0), breaks=seq (0,200,10)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = -90, vjust = 0.25, hjust = 0.25)) +
   facet_wrap(~Species)
 
-reactable(LFM_summary <- LFM_2020 %>%
+reactable(
+LFM_summary <- LFM_2020 %>%
   group_by(Collection.date, Species) %>%
-  summarise(meanLFM = mean(meanLFM)) %>%
-  spread(Collection.date, meanLFM) %>%
-  mutate_if(is.numeric, round, digits = 2))
-
+  summarise(stderr = std.error(meanLFM),
+            meanLFM = mean(meanLFM)) %>%
+  mutate_if(is.numeric, round, digits = 2) %>%
+  mutate(LFM = str_c(meanLFM, stderr, sep = " ± ")) %>%
+  select(Collection.date, LFM, Species) %>%
+  spread(Collection.date, LFM)
+)
 ```
 
 # Historical data
@@ -178,7 +184,6 @@ LFM_hist <- LFM_raw %>%
                            "St Mary's - Bigpod ceanothus")) %>%
   ungroup()
 
-
 LFMHist_big <- ggplot(LFM_hist, aes(x = month1, y = meanLFM, color = ID)) +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
   geom_line(aes(x = month1, y = meanLFM, group = ID), size = 1.25) +
@@ -189,7 +194,7 @@ LFMHist_big <- ggplot(LFM_hist, aes(x = month1, y = meanLFM, color = ID)) +
   scale_y_continuous(limits = c(45,140), expand = c(0,0), breaks=seq (0,200,10)) +
   scale_shape_manual(values = c(15, 16, 17, 23)) +
   scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956")) +
-#  scale_x_discrete(limits = c("January", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")) +
+  scale_x_discrete(limits = c("June", "July", "August", "September", "October", "November", "December", "January", "February", "March", "April", "May")) +
   theme_bw() +
   theme(strip.background = element_blank(),
         legend.background = element_blank(),
@@ -209,7 +214,7 @@ LFMHist_small <- ggplot(LFM_hist, aes(x = month1, y = meanLFM, color = ID)) +
   scale_y_continuous(limits = c(45,140), expand = c(0,0), breaks=seq (0,200,10)) +
   scale_shape_manual(values = c(15, 16, 17, 23)) +
   scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956")) +
-#  scale_x_discrete(limits = c("January", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")) +
+  scale_x_discrete(limits = c("June", "July", "August", "September", "October", "November", "December", "January", "February", "March", "April", "May")) +
   theme_bw() +
   theme(strip.background = element_blank(),
         legend.background = element_blank(),
@@ -232,7 +237,7 @@ LFM_2020 <- LFM_raw %>%
          Site == "Painted Cave") %>%
   mutate(Collection.date2 = Collection.date) %>%
   separate(Collection.date2, sep = "-", into = c("year", "month", "day")) %>%
-  filter(year == "2020") %>%
+  filter(year == "2020" | year == "2021") %>%
   group_by(Site, Species, Collection.date) %>%
   summarise(meanLFM = mean(LFM),
             seLFM = std.error(LFM)) %>%
@@ -244,8 +249,8 @@ LFM_2020 <- LFM_raw %>%
                      "Painted Cave - Bigpod ceanothus")) %>%
   ungroup()
 
-min_2020_date <- as_date("2019-12-15")
-max_2020_date <- as_date("2020-12-15")
+min_2020_date <- as_date("2020-05-30")
+max_2020_date <- as_date("2021-05-30")
 
 LFM2020_big <- ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = ID)) +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM), width = 7, size = 1) +
@@ -254,7 +259,7 @@ LFM2020_big <- ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = ID
   labs(x = "Data Collection Date",
        y = "Live Fuel Mositure Content (%)",
        color = "Species") +
-  scale_y_continuous(limits = c(45,140), expand = c(0,0), breaks=seq (0,200,10)) +
+  scale_y_continuous(limits = c(45,130), expand = c(0,0), breaks=seq (0,200,10)) +
   scale_shape_manual(values = c(15, 16, 17, 23)) +
   scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956")) +
   scale_x_date(limits = c(min_2020_date, max_2020_date), breaks = "1 month", minor_breaks = NULL, date_labels = "%B", expand = c(0,0)) +
@@ -273,7 +278,7 @@ LFM2020_small <- ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = 
   labs(x = "Data Collection Date",
        y = "Live Fuel Mositure Content (%)",
        color = "Species") +
-  scale_y_continuous(limits = c(45,140), expand = c(0,0), breaks=seq (0,200,10)) +
+  scale_y_continuous(limits = c(45,130), expand = c(0,0), breaks=seq (0,200,10)) +
   scale_shape_manual(values = c(15, 16, 17, 23)) +
   scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956")) +
   scale_x_date(limits = c(min_2020_date, max_2020_date), breaks = "1 month", minor_breaks = NULL, date_labels = "%B", expand = c(0,0)) +
@@ -288,8 +293,8 @@ LFM2020_small <- ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = 
 
 ## change date in filename each time
 
-ggsave(plot = LFM2020_big, filename = "Figures/LFM_2020_12_14_Big.png", height = 8.5, width = 11, units = "in", dpi = 300)
-ggsave(plot = LFM2020_small, filename = "Figures/LFM_2020_12_14_Small.png", height = 4, width = 6, units = "in", dpi = 300)
+ggsave(plot = LFM2020_big, filename = "Figures/LFM_2021_04_15_Big.png", height = 8.5, width = 11, units = "in", dpi = 300)
+ggsave(plot = LFM2020_small, filename = "Figures/LFM_2021_04_15_Small.png", height = 4, width = 6, units = "in", dpi = 300)
 
 
 ```
