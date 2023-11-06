@@ -1,0 +1,303 @@
+---
+title: "Simple LFM Graphs"
+author: "Josie Lesage"
+date: "7/16/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(plotrix)
+library(reactable)
+library(gridExtra)
+library(lubridate)
+library(here)
+library(janitor)
+
+```
+
+# Introduction
+
+This code is meant to produce a simple graph of LFM at sites near the Santa Barbara Botanic Garden to raise awareness of fire danger and keep local residents informed.  
+
+Data is typically collected every two weeks from each site. Samples are collected and dried in accordance with USFS recommendations.  
+
+In the near future, we hope to show conditions near the Garden (in Mission Canyon) and near St. Mary's. 
+
+```{r data, include=FALSE, echo=FALSE}
+lfm_raw <- read.csv(here("LFM_PaintedCave_data.csv")) %>%
+  clean_names() %>% 
+  mutate(lfm = lfm*100,
+         species = recode_factor(species,
+                                 "ADFA" = "Chamise",
+                                 "CEME" = "Bigpod ceanothus")) %>%
+  mutate(collection_date2 = mdy(collection_date)) %>%
+  mutate(recode_factor(subsite, "Unknown" = ""))
+
+lfm <- lfm_raw %>%
+  filter(concern != "Yes",
+         species != "QUAG") %>%
+  group_by(collection_date, site, species, subsite) %>%
+  summarise(meanLFM = mean(lfm),
+            seLFM = std.error(lfm)) %>%
+  mutate(site2 = site,
+         species2 = species) %>%
+  unite(site2, species2, col = "ID", sep = " - ")
+```
+
+# Current conditions 
+Here are the current conditions at Painted Cave. At some sites, only one sample is collected and there are no error bars. For sites with error bars, these represent the standard error.
+
+```{r Graph of current conditions}
+LFM_2020 <- lfm %>%
+  separate(collection_date, sep = "-", into = c("year", "month", "day")) %>%
+  filter(year == "2020" | year == "2021",
+         Site == "Painted Cave") %>%
+  unite(Collection.date, "year", "month", "day", sep = "-") 
+        
+ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = Subsite, group = (Subsite))) +
+  geom_point(aes(shape = Species), size = 3) +
+  geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
+  geom_line(size = 1, aes(linetype = Species)) +
+  labs(x = "Collection date",
+       y = "Live Fuel Mositure Content (%)",
+       title = "Live Fuel Moisture Conditions") +
+  scale_y_continuous(limits = c(0,130), expand = c(0,0), breaks=seq (0,200,10)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = -90, vjust = 0.25, hjust = 0.25)) +
+  facet_wrap(~Species)
+
+reactable(
+LFM_summary <- LFM_2020 %>%
+  group_by(Collection.date, Species) %>%
+  summarise(stderr = std.error(meanLFM),
+            meanLFM = mean(meanLFM)) %>%
+  mutate_if(is.numeric, round, digits = 2) %>%
+  mutate(LFM = str_c(meanLFM, stderr, sep = " ± ")) %>%
+  select(Collection.date, LFM, Species) %>%
+  spread(Collection.date, LFM)
+)
+```
+
+# Historical data
+We'd also like to know how current conditions compare with past data, we we'll summarize average monthly LFM for the past few years, and then will compare that line to this year's data.
+
+```{r historical comparison}
+# comparing pre-2020 avg to 2020
+LFM_pre_2020 <- LFM_raw %>%
+  filter(Concern != "Yes",
+         Species != "CEBE",
+         Species != "QUAG", 
+         Site == "Painted Cave") %>%
+  separate(Collection.date, sep = "-", into = c("year", "month", "day")) %>%
+  filter(year != "2020") %>%
+  group_by(Site, Subsite, Species, month) %>%
+  summarise(meanLFM = mean(LFM),
+            seLFM = std.error(LFM)) %>%
+  mutate(time = "Historical Mean (2013-2019)")
+
+LFM_2020 <- LFM_raw %>%
+  filter(Concern != "Yes",
+         Species != "CEBE",
+         Species != "QUAG", 
+         Site == "Painted Cave") %>%
+  separate(Collection.date, sep = "-", into = c("year", "month", "day")) %>%
+  filter(year == "2020") %>%
+  group_by(Site, Subsite, Species, month) %>%
+  summarise(meanLFM = mean(LFM),
+            seLFM = std.error(LFM)) %>%
+  mutate(time = "2020")
+
+LFM_comp <- bind_rows(LFM_pre_2020, LFM_2020) %>%
+  ungroup() %>%
+  mutate(Subsite = fct_recode(Subsite, "PC - Laurel Spring" = "PC - LS"),
+         Site2 = Site,
+         Subsite2 = Subsite,
+         Species2 = Species,
+         time2 = time) %>%
+  unite(Subsite2, time2, col = "ID", sep = " ")
+  
+LFM_comp_graph <- ggplot(LFM_comp, aes(x = month, y = meanLFM, color = ID, group = ID)) +
+  geom_point(aes(shape = ID), size = 3) +
+  geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
+  geom_line(size = 1, aes(group = ID, color = ID)) +
+  labs(x = "Collection month",
+       y = "Live Fuel Mositure Content (%)",
+       title = "Live Fuel Moisture Conditions at Painted Cave") +
+  scale_y_continuous(limits = c(45,140), expand = c(0,0), breaks=seq (0,200,10)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = -45, vjust = -0.5, hjust = 0.5)) +
+  facet_wrap(~Species)
+
+LFM_comp_graph  
+
+## comparing all years indvidually 
+LFM_allyears <- LFM_raw %>%
+  filter(Concern != "Yes",
+         Species != "CEBE",
+         Species != "QUAG", 
+         Site != "Montecito Fire",
+         Site != "Tunnel Road",
+         Site != "St Mary's") %>%
+  separate(Collection.date, sep = "-", into = c("year", "month", "day")) %>%
+  group_by(Site, Species, year, month, Subsite) %>%
+  summarise(meanLFM = mean(LFM),
+            seLFM = std.error(LFM)) 
+
+LFM_all_graph <- ggplot(LFM_allyears, aes(x = month, y = meanLFM, color = year, group = year)) +
+  geom_point(aes(shape = Subsite), size = 3) +
+  geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
+  geom_line(size = 1, aes(color = year)) +
+  labs(x = "Collection date",
+       y = "Live Fuel Mositure Content (%)",
+       title = "Live Fuel Moisture Conditions at Painted Cave") +
+  scale_y_continuous(limits = c(45,160), expand = c(0,0), breaks=seq (0,200,10)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = -45, vjust = -0.5, hjust = 0.5)) +
+  facet_wrap(~Species)
+
+
+grid.arrange(LFM_comp_graph, LFM_all_graph)
+
+```
+
+## For website pub.
+```{r historical web}
+LFM_hist <- LFM_raw %>%
+  filter(Concern != "Yes",
+         Species != "CEBE",
+         Species != "QUAG",
+         Site != "Montecito Fire",
+         Site != "Tunnel Road") %>%
+  mutate(Collection.date2 = Collection.date) %>%
+  separate(Collection.date, sep = "-", into = c("year", "month", "day")) %>%
+  mutate(month1 = month(ymd(Collection.date2), label = TRUE, abbr = FALSE)) %>%
+  group_by(Site, Species, month1) %>%
+  summarise(meanLFM = mean(LFM),
+            seLFM = std.error(LFM)) %>%
+  unite(Site, Species, col = "ID", sep = " - ") %>%
+  mutate(ID = as.factor(ID), 
+    ID = fct_relevel(ID, "Painted Cave - Chamise", 
+                           "St Mary's - Chamise", 
+                           "Painted Cave - Bigpod ceanothus",
+                           "St Mary's - Bigpod ceanothus")) %>%
+  ungroup()
+
+LFMHist_big <- ggplot(LFM_hist, aes(x = month1, y = meanLFM, color = ID)) +
+  geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
+  geom_line(aes(x = month1, y = meanLFM, group = ID), size = 1.25) +
+  geom_hline(aes(yintercept = 60, color = "60% Critical Threshold"), linetype="dashed", size=1) +
+  labs(x = "Month",
+       y = "Live Fuel Mositure Content (%)",
+       color = "Site and Species") +
+  scale_y_continuous(limits = c(45,140), expand = c(0,0), breaks=seq (0,200,10)) +
+  scale_shape_manual(values = c(15, 16, 17, 23)) +
+  scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956")) +
+  scale_x_discrete(limits = c("June", "July", "August", "September", "October", "November", "December", "January", "February", "March", "April", "May")) +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        legend.background = element_blank(),
+        text = element_text(size = 16, color = "black"),
+        axis.text = element_text(size = 14, color = "black"),
+        legend.text = element_text(size = 12, margin = margin(t = 5)),
+        axis.text.x = element_text(angle = -45, vjust = 0.4, hjust = 0.1))
+
+
+LFMHist_small <- ggplot(LFM_hist, aes(x = month1, y = meanLFM, color = ID)) +
+  geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
+  geom_line(aes(x = month1, y = meanLFM, group = ID), size = 1) +
+  geom_hline(aes(yintercept = 60, color = "60% Critical Threshold"), linetype="dashed", size=1) +
+  labs(x = "Month",
+       y = "Live Fuel Mositure Content (%)",
+       color = "Site and Species") +
+  scale_y_continuous(limits = c(45,140), expand = c(0,0), breaks=seq (0,200,10)) +
+  scale_shape_manual(values = c(15, 16, 17, 23)) +
+  scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956")) +
+  scale_x_discrete(limits = c("June", "July", "August", "September", "October", "November", "December", "January", "February", "March", "April", "May")) +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        legend.background = element_blank(),
+        text = element_text(size = 14, color = "black"),
+        axis.text = element_text(size = 10, color = "black"),
+        legend.text = element_text(margin = margin(t = 5), size = 10),
+        axis.text.x = element_text(angle = -45, vjust = 0.4, hjust = 0.1))
+
+
+ggsave(plot = LFMHist_big, filename = "Figures/LFM_Hist_Big.png", height = 8.5, width = 11, units = "in", dpi = 300)
+ggsave(plot = LFMHist_small, filename = "Figures/LFM_Hist_Small.png", height = 4, width = 6, units = "in", dpi = 300)
+
+```
+
+```{r 2020 web}
+LFM_2020 <- LFM_raw %>%
+  filter(Concern != "Yes",
+         Species != "CEBE",
+         Species != "QUAG", 
+         Site == "Painted Cave") %>%
+  mutate(Collection.date2 = Collection.date) %>%
+  separate(Collection.date2, sep = "-", into = c("year", "month", "day")) %>%
+  filter(year == "2020" | year == "2021") %>%
+  group_by(Site, Species, Collection.date) %>%
+  summarise(meanLFM = mean(LFM),
+            seLFM = std.error(LFM)) %>%
+  mutate(time = "2020",
+         Collection.date = as_date(Collection.date))%>%
+  unite(Site, Species, col = "ID", sep = " - ") %>%
+  mutate(ID = as.factor(ID), 
+    ID = fct_relevel(ID, "Painted Cave - Chamise", 
+                     "Painted Cave - Bigpod ceanothus")) %>%
+  ungroup()
+
+min_2020_date <- as_date("2020-05-30")
+max_2020_date <- as_date("2021-05-30")
+
+LFM2020_big <- ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = ID)) +
+  geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM), width = 7, size = 1) +
+  geom_line(aes(x = Collection.date, y = meanLFM, group = ID), size = 1.25) +
+  geom_hline(aes(yintercept = 60, color = "60% Critical Threshold \n"), linetype="dashed", size=1) +
+  labs(x = "Data Collection Date",
+       y = "Live Fuel Mositure Content (%)",
+       color = "Species") +
+  scale_y_continuous(limits = c(45,130), expand = c(0,0), breaks=seq (0,200,10)) +
+  scale_shape_manual(values = c(15, 16, 17, 23)) +
+  scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956")) +
+  scale_x_date(limits = c(min_2020_date, max_2020_date), breaks = "1 month", minor_breaks = NULL, date_labels = "%B", expand = c(0,0)) +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        legend.background = element_blank(),
+        text = element_text(size = 16, color = "black"),
+        axis.text = element_text(size = 14, color = "black"),
+        legend.text = element_text(size = 12, margin = margin(t = 5)),
+        axis.text.x = element_text(angle = -45, vjust = 0.4, hjust = 0.1))
+
+LFM2020_small <- ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = ID)) +
+  geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM), width = 7, size = 1) +
+  geom_line(aes(x = Collection.date, y = meanLFM, group = ID), size = 1) +
+  geom_hline(aes(yintercept = 60, color = "60% Critical Threshold \n"), linetype="dashed", size=1) +
+  labs(x = "Data Collection Date",
+       y = "Live Fuel Mositure Content (%)",
+       color = "Species") +
+  scale_y_continuous(limits = c(45,130), expand = c(0,0), breaks=seq (0,200,10)) +
+  scale_shape_manual(values = c(15, 16, 17, 23)) +
+  scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956")) +
+  scale_x_date(limits = c(min_2020_date, max_2020_date), breaks = "1 month", minor_breaks = NULL, date_labels = "%B", expand = c(0,0)) +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        legend.background = element_blank(),
+        text = element_text(size = 14, color = "black"),
+        axis.text = element_text(size = 10, color = "black"),
+        legend.text = element_text(margin = margin(t = 5), size = 10),
+        axis.text.x = element_text(angle = -45, vjust = 0.4, hjust = 0.1))
+
+
+## change date in filename each time
+
+ggsave(plot = LFM2020_big, filename = "Figures/LFM_2021_04_15_Big.png", height = 8.5, width = 11, units = "in", dpi = 300)
+ggsave(plot = LFM2020_small, filename = "Figures/LFM_2021_04_15_Small.png", height = 4, width = 6, units = "in", dpi = 300)
+
+
+```
+
