@@ -53,13 +53,13 @@ Here are the current conditions at Painted Cave. At some sites, only one sample 
 
 ```{r Graph of current conditions}
 LFM_2020 <- lfm %>%
-  separate(collection_date, sep = "-", into = c("year", "month", "day")) %>%
+  separate(collection_date, sep = "/", into = c("day", "month", "year")) %>%
   filter(year == "2020" | year == "2021",
-         Site == "Painted Cave") %>%
-  unite(Collection.date, "year", "month", "day", sep = "-") 
+         site == "Painted Cave") %>%
+  unite(collection_date, "day", "month", "year", sep = "/") 
         
-ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = Subsite, group = (Subsite))) +
-  geom_point(aes(shape = Species), size = 3) +
+ggplot(LFM_2020, aes(x = collection_date, y = meanLFM, color = subsite, group = (subsite))) +
+  geom_point(aes(shape = species), size = 3) +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
   geom_line(size = 1, aes(linetype = Species)) +
   labs(x = "Collection date",
@@ -68,17 +68,17 @@ ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = Subsite, group = 
   scale_y_continuous(limits = c(0,130), expand = c(0,0), breaks=seq (0,200,10)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = -90, vjust = 0.25, hjust = 0.25)) +
-  facet_wrap(~Species)
+  facet_wrap(~species)
 
 reactable(
 LFM_summary <- LFM_2020 %>%
-  group_by(Collection.date, Species) %>%
+  group_by(collection_date, species) %>%
   summarise(stderr = std.error(meanLFM),
             meanLFM = mean(meanLFM)) %>%
   mutate_if(is.numeric, round, digits = 2) %>%
   mutate(LFM = str_c(meanLFM, stderr, sep = " ± ")) %>%
-  select(Collection.date, LFM, Species) %>%
-  spread(Collection.date, LFM)
+  select(collection_date, lfm, species) %>%
+  spread(collection_date, lfm)
 )
 ```
 
