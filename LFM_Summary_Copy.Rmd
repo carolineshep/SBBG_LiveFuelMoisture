@@ -116,9 +116,9 @@ LFM_summary <- LFM_2020 %>%
 We'd also like to know how current conditions compare with past data, we we'll summarize average monthly LFM for the past few years, and then will compare that line to this year's data.
 
 ```{r historical comparison}
-# comparing pre-2020 avg to 2020
+# comparing pre-2022 avg to 2022
 LFM_pre_2021 <- lfm_raw %>%
-  filter(concern != "Yes",
+  filter(concern != "Yes", 
          species != "CEBE",
          species != "QUAG", 
          site == "Painted Cave") %>%
@@ -141,14 +141,14 @@ LFM_2022 <- lfm_raw %>%
             seLFM = std.error(lfm)) %>%
   mutate(time = "2022")
 
-LFM_comp <- bind_rows(LFM_pre_2020, LFM_2020) %>%
+LFM_comp <- bind_rows(LFM_pre_2021, LFM_2022) %>%
   ungroup() %>%
-  mutate(Subsite = fct_recode(Subsite, "PC - Laurel Spring" = "PC - LS"),
-         Site2 = Site,
-         Subsite2 = Subsite,
-         Species2 = Species,
+  mutate(subsite = fct_recode(subsite, "PC - Laurel Spring" = "PC - LS"),
+         site2 = site,
+         subsite2 = subsite,
+         species2 = species,
          time2 = time) %>%
-  unite(Subsite2, time2, col = "ID", sep = " ")
+  unite(subsite2, time2, col = "ID", sep = " ")
   
 LFM_comp_graph <- ggplot(LFM_comp, aes(x = month, y = meanLFM, color = ID, group = ID)) +
   geom_point(aes(shape = ID), size = 3) +
@@ -160,22 +160,22 @@ LFM_comp_graph <- ggplot(LFM_comp, aes(x = month, y = meanLFM, color = ID, group
   scale_y_continuous(limits = c(45,140), expand = c(0,0), breaks=seq (0,200,10)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = -45, vjust = -0.5, hjust = 0.5)) +
-  facet_wrap(~Species)
+  facet_wrap(~species)
 
 LFM_comp_graph  
 
-## comparing all years indvidually 
-LFM_allyears <- LFM_raw %>%
-  filter(Concern != "Yes",
-         Species != "CEBE",
-         Species != "QUAG", 
-         Site != "Montecito Fire",
-         Site != "Tunnel Road",
-         Site != "St Mary's") %>%
-  separate(Collection.date, sep = "-", into = c("year", "month", "day")) %>%
-  group_by(Site, Species, year, month, Subsite) %>%
-  summarise(meanLFM = mean(LFM),
-            seLFM = std.error(LFM)) 
+## comparing all years individually 
+LFM_allyears <- lfm_raw %>%
+  filter(concern != "Yes",
+         species != "CEBE",
+         species != "QUAG", 
+         site != "Montecito Fire",
+         site != "Tunnel Road",
+         site != "St Mary's") %>%
+  separate(collection_date, sep = "/", into = c("month", "day", "year")) %>%
+  group_by(species, year, month, subsite) %>%
+  summarise(meanLFM = mean(lfm),
+            seLFM = std.error(lfm)) 
 
 LFM_all_graph <- ggplot(LFM_allyears, aes(x = month, y = meanLFM, color = year, group = year)) +
   geom_point(aes(shape = Subsite), size = 3) +
@@ -196,19 +196,19 @@ grid.arrange(LFM_comp_graph, LFM_all_graph)
 
 ## For website pub.
 ```{r historical web}
-LFM_hist <- LFM_raw %>%
-  filter(Concern != "Yes",
-         Species != "CEBE",
-         Species != "QUAG",
-         Site != "Montecito Fire",
-         Site != "Tunnel Road") %>%
-  mutate(Collection.date2 = Collection.date) %>%
-  separate(Collection.date, sep = "-", into = c("year", "month", "day")) %>%
-  mutate(month1 = month(ymd(Collection.date2), label = TRUE, abbr = FALSE)) %>%
-  group_by(Site, Species, month1) %>%
-  summarise(meanLFM = mean(LFM),
-            seLFM = std.error(LFM)) %>%
-  unite(Site, Species, col = "ID", sep = " - ") %>%
+LFM_hist <- lfm_raw %>%
+  filter(concern != "Yes",
+         species != "CEBE",
+         species != "QUAG",
+         site != "Montecito Fire",
+         site != "Tunnel Road") %>%
+  mutate(collection_date2 = collection_date) %>%
+  separate(collection_date, sep = "/", into = c("month", "day", "year")) %>%
+  mutate(month1 = month(mdy(collection_date2), label = TRUE, abbr = FALSE)) %>%
+  group_by(site, species, month1) %>%
+  summarise(meanLFM = mean(lfm),
+            seLFM = std.error(lfm)) %>%
+  unite(site, species, col = "ID", sep = " - ") %>%
   mutate(ID = as.factor(ID), 
     ID = fct_relevel(ID, "Painted Cave - Chamise", 
                            "St Mary's - Chamise", 
@@ -225,7 +225,7 @@ LFMHist_big <- ggplot(LFM_hist, aes(x = month1, y = meanLFM, color = ID)) +
        color = "Site and Species") +
   scale_y_continuous(limits = c(45,140), expand = c(0,0), breaks=seq (0,200,10)) +
   scale_shape_manual(values = c(15, 16, 17, 23)) +
-  scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956")) +
+  scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956", "lightgreen")) +
   scale_x_discrete(limits = c("June", "July", "August", "September", "October", "November", "December", "January", "February", "March", "April", "May")) +
   theme_bw() +
   theme(strip.background = element_blank(),
@@ -245,7 +245,7 @@ LFMHist_small <- ggplot(LFM_hist, aes(x = month1, y = meanLFM, color = ID)) +
        color = "Site and Species") +
   scale_y_continuous(limits = c(45,140), expand = c(0,0), breaks=seq (0,200,10)) +
   scale_shape_manual(values = c(15, 16, 17, 23)) +
-  scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956")) +
+  scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956", "lightgreen")) +
   scale_x_discrete(limits = c("June", "July", "August", "September", "October", "November", "December", "January", "February", "March", "April", "May")) +
   theme_bw() +
   theme(strip.background = element_blank(),
