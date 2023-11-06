@@ -261,32 +261,32 @@ ggsave(plot = LFMHist_small, filename = "Figures/LFM_Hist_Small.png", height = 4
 
 ```
 
-```{r 2020 web}
-LFM_2020 <- LFM_raw %>%
-  filter(Concern != "Yes",
-         Species != "CEBE",
-         Species != "QUAG", 
-         Site == "Painted Cave") %>%
-  mutate(Collection.date2 = Collection.date) %>%
-  separate(Collection.date2, sep = "-", into = c("year", "month", "day")) %>%
-  filter(year == "2020" | year == "2021") %>%
-  group_by(Site, Species, Collection.date) %>%
-  summarise(meanLFM = mean(LFM),
-            seLFM = std.error(LFM)) %>%
-  mutate(time = "2020",
-         Collection.date = as_date(Collection.date))%>%
-  unite(Site, Species, col = "ID", sep = " - ") %>%
+```{r 2022 web}
+LFM_2022 <- lfm_raw %>%
+  filter(concern != "Yes",
+         species != "CEBE",
+         species != "QUAG", 
+         site == "Painted Cave") %>%
+  mutate(collection_date2 = collection_date) %>%
+  separate(collection_date2, sep = "/", into = c("month", "day", "year")) %>%
+  filter(year == "2022" | year == "2023") %>%
+  group_by(site, species, collection_date) %>%
+  summarise(meanLFM = mean(lfm),
+            seLFM = std.error(lfm)) %>%
+  mutate(time = "2022",
+         collection_date = as_date(mdy(collection_date)))%>%
+  unite(site, species, col = "ID", sep = " - ") %>%
   mutate(ID = as.factor(ID), 
     ID = fct_relevel(ID, "Painted Cave - Chamise", 
                      "Painted Cave - Bigpod ceanothus")) %>%
   ungroup()
 
-min_2020_date <- as_date("2020-05-30")
-max_2020_date <- as_date("2021-05-30")
+min_2022_date <- as_date("2022-05-30")
+max_2022_date <- as_date("2023-05-30")
 
-LFM2020_big <- ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = ID)) +
+LFM2022_big <- ggplot(LFM_2020, aes(x = collection_date, y = meanLFM, color = ID)) +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM), width = 7, size = 1) +
-  geom_line(aes(x = Collection.date, y = meanLFM, group = ID), size = 1.25) +
+  geom_line(aes(x = collection_date, y = meanLFM, group = ID), size = 1.25) +
   geom_hline(aes(yintercept = 60, color = "60% Critical Threshold \n"), linetype="dashed", size=1) +
   labs(x = "Data Collection Date",
        y = "Live Fuel Mositure Content (%)",
@@ -294,7 +294,7 @@ LFM2020_big <- ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = ID
   scale_y_continuous(limits = c(45,130), expand = c(0,0), breaks=seq (0,200,10)) +
   scale_shape_manual(values = c(15, 16, 17, 23)) +
   scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956")) +
-  scale_x_date(limits = c(min_2020_date, max_2020_date), breaks = "1 month", minor_breaks = NULL, date_labels = "%B", expand = c(0,0)) +
+  scale_x_date(limits = c(min_2022_date, max_2022_date), breaks = "1 month", minor_breaks = NULL, date_labels = "%B", expand = c(0,0)) +
   theme_bw() +
   theme(strip.background = element_blank(),
         legend.background = element_blank(),
@@ -303,9 +303,9 @@ LFM2020_big <- ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = ID
         legend.text = element_text(size = 12, margin = margin(t = 5)),
         axis.text.x = element_text(angle = -45, vjust = 0.4, hjust = 0.1))
 
-LFM2020_small <- ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = ID)) +
+LFM2022_small <- ggplot(LFM_2020, aes(x = collection_date, y = meanLFM, color = ID)) +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM), width = 7, size = 1) +
-  geom_line(aes(x = Collection.date, y = meanLFM, group = ID), size = 1) +
+  geom_line(aes(x = collection_date, y = meanLFM, group = ID), size = 1) +
   geom_hline(aes(yintercept = 60, color = "60% Critical Threshold \n"), linetype="dashed", size=1) +
   labs(x = "Data Collection Date",
        y = "Live Fuel Mositure Content (%)",
@@ -313,7 +313,7 @@ LFM2020_small <- ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = 
   scale_y_continuous(limits = c(45,130), expand = c(0,0), breaks=seq (0,200,10)) +
   scale_shape_manual(values = c(15, 16, 17, 23)) +
   scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956")) +
-  scale_x_date(limits = c(min_2020_date, max_2020_date), breaks = "1 month", minor_breaks = NULL, date_labels = "%B", expand = c(0,0)) +
+  scale_x_date(limits = c(min_2022_date, max_2022_date), breaks = "1 month", minor_breaks = NULL, date_labels = "%B", expand = c(0,0)) +
   theme_bw() +
   theme(strip.background = element_blank(),
         legend.background = element_blank(),
@@ -325,8 +325,8 @@ LFM2020_small <- ggplot(LFM_2020, aes(x = Collection.date, y = meanLFM, color = 
 
 ## change date in filename each time
 
-ggsave(plot = LFM2020_big, filename = "Figures/LFM_2021_04_15_Big.png", height = 8.5, width = 11, units = "in", dpi = 300)
-ggsave(plot = LFM2020_small, filename = "Figures/LFM_2021_04_15_Small.png", height = 4, width = 6, units = "in", dpi = 300)
+ggsave(plot = LFM2022_big, filename = "Figures/LFM_2021_04_15_Big.png", height = 8.5, width = 11, units = "in", dpi = 300)
+ggsave(plot = LFM2022_small, filename = "Figures/LFM_2021_04_15_Small.png", height = 4, width = 6, units = "in", dpi = 300)
 
 
 ```
