@@ -61,7 +61,37 @@ LFM_2020 <- lfm %>%
 ggplot(LFM_2020, aes(x = collection_date, y = meanLFM, color = subsite, group = (subsite))) +
   geom_point(aes(shape = species), size = 3) +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
-  geom_line(size = 1, aes(linetype = Species)) +
+  geom_line(size = 1, aes(linetype = species)) +
+  labs(x = "Collection date",
+       y = "Live Fuel Mositure Content (%)",
+       title = "Live Fuel Moisture Conditions") +
+  scale_y_continuous(limits = c(0,130), expand = c(0,0), breaks=seq (0,200,10)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = -90, vjust = 0.25, hjust = 0.25)) +
+  facet_wrap(~species)
+
+reactable(
+LFM_summary <- LFM_2020 %>%
+  group_by(collection_date, species) %>%
+  summarise(stderr = std.error(meanLFM),
+            meanLFM = mean(meanLFM)) %>%
+  mutate_if(is.numeric, round, digits = 2) %>%
+  mutate(LFM = str_c(meanLFM, stderr, sep = " ± ")) %>%
+  select(collection_date, lfm, species) %>%
+  spread(collection_date, lfm)
+)
+
+# recreating this for 2022-2023
+LFM_2023 <- lfm %>%
+  separate(collection_date, sep = "/", into = c("day", "month", "year")) %>%
+  filter(year == "2022" | year == "2023",
+         site == "Painted Cave") %>%
+  unite(collection_date, "day", "month", "year", sep = "/") 
+        
+ggplot(LFM_2020, aes(x = collection_date, y = meanLFM, color = subsite, group = (subsite))) +
+  geom_point(aes(shape = species), size = 3) +
+  geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
+  geom_line(size = 1, aes(linetype = species)) +
   labs(x = "Collection date",
        y = "Live Fuel Mositure Content (%)",
        title = "Live Fuel Moisture Conditions") +
@@ -87,29 +117,29 @@ We'd also like to know how current conditions compare with past data, we we'll s
 
 ```{r historical comparison}
 # comparing pre-2020 avg to 2020
-LFM_pre_2020 <- LFM_raw %>%
-  filter(Concern != "Yes",
-         Species != "CEBE",
-         Species != "QUAG", 
-         Site == "Painted Cave") %>%
-  separate(Collection.date, sep = "-", into = c("year", "month", "day")) %>%
-  filter(year != "2020") %>%
-  group_by(Site, Subsite, Species, month) %>%
-  summarise(meanLFM = mean(LFM),
-            seLFM = std.error(LFM)) %>%
-  mutate(time = "Historical Mean (2013-2019)")
+LFM_pre_2021 <- lfm_raw %>%
+  filter(concern != "Yes",
+         species != "CEBE",
+         species != "QUAG", 
+         site == "Painted Cave") %>%
+  separate(collection_date, sep = "/", into = c("month", "day", "year")) %>%
+  filter(year <= "2021") %>%
+  group_by(site, subsite, species, month) %>%
+  summarise(meanLFM = mean(lfm),
+            seLFM = std.error(lfm)) %>%
+  mutate(time = "Historical Mean (2013-2021)")
 
-LFM_2020 <- LFM_raw %>%
-  filter(Concern != "Yes",
-         Species != "CEBE",
-         Species != "QUAG", 
-         Site == "Painted Cave") %>%
-  separate(Collection.date, sep = "-", into = c("year", "month", "day")) %>%
-  filter(year == "2020") %>%
-  group_by(Site, Subsite, Species, month) %>%
-  summarise(meanLFM = mean(LFM),
-            seLFM = std.error(LFM)) %>%
-  mutate(time = "2020")
+LFM_2022 <- lfm_raw %>%
+  filter(concern != "Yes",
+         species != "CEBE",
+         species != "QUAG", 
+         site == "Painted Cave") %>%
+  separate(collection_date, sep = "/", into = c("month", "day", "year")) %>%
+  filter(year == "2022") %>%
+  group_by(site, subsite, species, month) %>%
+  summarise(meanLFM = mean(lfm),
+            seLFM = std.error(lfm)) %>%
+  mutate(time = "2022")
 
 LFM_comp <- bind_rows(LFM_pre_2020, LFM_2020) %>%
   ungroup() %>%
