@@ -76,7 +76,7 @@ LFM_summary <- LFM_2020 %>%
   summarise(stderr = std.error(meanLFM),
             meanLFM = mean(meanLFM)) %>%
   mutate_if(is.numeric, round, digits = 2) %>%
-  mutate(LFM = str_c(meanLFM, stderr, sep = " ± ")) %>%
+  mutate(lfm = str_c(meanLFM, stderr, sep = " ± ")) %>%
   select(collection_date, lfm, species) %>%
   spread(collection_date, lfm)
 )
@@ -84,32 +84,37 @@ LFM_summary <- LFM_2020 %>%
 # recreating this for 2022-2023
 LFM_2023 <- lfm %>%
   separate(collection_date, sep = "/", into = c("day", "month", "year")) %>%
-  filter(year == "2022" | year == "2023",
-         site == "Painted Cave") %>%
+  filter(year == "2023",
+         site == "Painted Cave", 
+         subsite != "PC- BP @ Oak #2", 
+         subsite != "PC - Big pod @ Oak #2") %>%
   unite(collection_date, "day", "month", "year", sep = "/") 
         
-ggplot(LFM_2020, aes(x = collection_date, y = meanLFM, color = subsite, group = (subsite))) +
-  geom_point(aes(shape = species), size = 3) +
+ggplot(LFM_2023, aes(x = collection_date, y = meanLFM, color = subsite, group = (subsite))) +
+  geom_point(size = 3) +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
-  geom_line(size = 1, aes(linetype = species)) +
+  geom_line(size = 1) +
   labs(x = "Collection date",
        y = "Live Fuel Mositure Content (%)",
        title = "Live Fuel Moisture Conditions") +
-  scale_y_continuous(limits = c(0,130), expand = c(0,0), breaks=seq (0,200,10)) +
+  scale_y_continuous(limits = c(0,180), expand = c(0,0), breaks=seq (0,200,10)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = -90, vjust = 0.25, hjust = 0.25)) +
   facet_wrap(~species)
 
 reactable(
-LFM_summary <- LFM_2020 %>%
+LFM_summary <- LFM_2023 %>%
   group_by(collection_date, species) %>%
   summarise(stderr = std.error(meanLFM),
             meanLFM = mean(meanLFM)) %>%
   mutate_if(is.numeric, round, digits = 2) %>%
-  mutate(LFM = str_c(meanLFM, stderr, sep = " ± ")) %>%
+  mutate(lfm = str_c(meanLFM, stderr, sep = " ± ")) %>%
   select(collection_date, lfm, species) %>%
   spread(collection_date, lfm)
 )
+
+
+
 ```
 
 # Historical data
@@ -151,7 +156,7 @@ LFM_comp <- bind_rows(LFM_pre_2021, LFM_2022) %>%
   unite(subsite2, time2, col = "ID", sep = " ")
   
 LFM_comp_graph <- ggplot(LFM_comp, aes(x = month, y = meanLFM, color = ID, group = ID)) +
-  geom_point(aes(shape = ID), size = 3) +
+  geom_point(aes(color = ID)) +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
   geom_line(size = 1, aes(group = ID, color = ID)) +
   labs(x = "Collection month",
@@ -169,6 +174,7 @@ LFM_allyears <- lfm_raw %>%
   filter(concern != "Yes",
          species != "CEBE",
          species != "QUAG", 
+         species != "CECRA",
          site != "Montecito Fire",
          site != "Tunnel Road",
          site != "St Mary's") %>%
@@ -178,7 +184,7 @@ LFM_allyears <- lfm_raw %>%
             seLFM = std.error(lfm)) 
 
 LFM_all_graph <- ggplot(LFM_allyears, aes(x = month, y = meanLFM, color = year, group = year)) +
-  geom_point(aes(shape = Subsite), size = 3) +
+  geom_point(aes(shape = subsite), size = 3) +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
   geom_line(size = 1, aes(color = year)) +
   labs(x = "Collection date",
@@ -187,10 +193,11 @@ LFM_all_graph <- ggplot(LFM_allyears, aes(x = month, y = meanLFM, color = year, 
   scale_y_continuous(limits = c(45,160), expand = c(0,0), breaks=seq (0,200,10)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = -45, vjust = -0.5, hjust = 0.5)) +
-  facet_wrap(~Species)
+  facet_wrap(~species)
 
+LFM_all_graph
 
-grid.arrange(LFM_comp_graph, LFM_all_graph)
+# grid.arrange(LFM_comp_graph, LFM_all_graph)
 
 ```
 
@@ -201,6 +208,7 @@ LFM_hist <- lfm_raw %>%
          species != "CEBE",
          species != "QUAG",
          site != "Montecito Fire",
+         site != "ECC",
          site != "Tunnel Road") %>%
   mutate(collection_date2 = collection_date) %>%
   separate(collection_date, sep = "/", into = c("month", "day", "year")) %>%
@@ -215,14 +223,16 @@ LFM_hist <- lfm_raw %>%
                            "Painted Cave - Bigpod ceanothus",
                            "St Mary's - Bigpod ceanothus")) %>%
   ungroup()
+# above plotted data from 2013-present for painted cave, but limited for St Mary's
 
 LFMHist_big <- ggplot(LFM_hist, aes(x = month1, y = meanLFM, color = ID)) +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
   geom_line(aes(x = month1, y = meanLFM, group = ID), size = 1.25) +
   geom_hline(aes(yintercept = 60, color = "60% Critical Threshold"), linetype="dashed", size=1) +
-  labs(x = "Month",
+  labs(x = "",
        y = "Live Fuel Mositure Content (%)",
-       color = "Site and Species") +
+       color = "Site and Species",
+       title = "Average historical fuel moisture content (per month & species) \n at each collection site") +
   scale_y_continuous(limits = c(45,140), expand = c(0,0), breaks=seq (0,200,10)) +
   scale_shape_manual(values = c(15, 16, 17, 23)) +
   scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956", "lightgreen")) +
@@ -242,7 +252,8 @@ LFMHist_small <- ggplot(LFM_hist, aes(x = month1, y = meanLFM, color = ID)) +
   geom_hline(aes(yintercept = 60, color = "60% Critical Threshold"), linetype="dashed", size=1) +
   labs(x = "Month",
        y = "Live Fuel Mositure Content (%)",
-       color = "Site and Species") +
+       color = "Site and Species",
+        title = "Average historical fuel moisture content (per month & species) \n at each collection site") +
   scale_y_continuous(limits = c(45,140), expand = c(0,0), breaks=seq (0,200,10)) +
   scale_shape_manual(values = c(15, 16, 17, 23)) +
   scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956", "lightgreen")) +
@@ -255,6 +266,8 @@ LFMHist_small <- ggplot(LFM_hist, aes(x = month1, y = meanLFM, color = ID)) +
         legend.text = element_text(margin = margin(t = 5), size = 10),
         axis.text.x = element_text(angle = -45, vjust = 0.4, hjust = 0.1))
 
+LFMHist_small
+LFMHist_big
 
 ggsave(plot = LFMHist_big, filename = "Figures/LFM_Hist_Big.png", height = 8.5, width = 11, units = "in", dpi = 300)
 ggsave(plot = LFMHist_small, filename = "Figures/LFM_Hist_Small.png", height = 4, width = 6, units = "in", dpi = 300)
@@ -281,8 +294,8 @@ LFM_2022 <- lfm_raw %>%
                      "Painted Cave - Bigpod ceanothus")) %>%
   ungroup()
 
-min_2022_date <- as_date("2022-05-30")
-max_2022_date <- as_date("2023-05-30")
+min_2022_date <- as_date(ymd("2022-05-30"))
+max_2022_date <- as_date(ymd("2023-05-30"))
 
 LFM2022_big <- ggplot(LFM_2020, aes(x = collection_date, y = meanLFM, color = ID)) +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM), width = 7, size = 1) +
@@ -294,7 +307,7 @@ LFM2022_big <- ggplot(LFM_2020, aes(x = collection_date, y = meanLFM, color = ID
   scale_y_continuous(limits = c(45,130), expand = c(0,0), breaks=seq (0,200,10)) +
   scale_shape_manual(values = c(15, 16, 17, 23)) +
   scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956")) +
-  scale_x_date(limits = c(min_2022_date, max_2022_date), breaks = "1 month", minor_breaks = NULL, date_labels = "%B", expand = c(0,0)) +
+ scale_x_date(breaks = "1 month", minor_breaks = "1 week", labels=date_format("%B")) +
   theme_bw() +
   theme(strip.background = element_blank(),
         legend.background = element_blank(),
@@ -325,8 +338,8 @@ LFM2022_small <- ggplot(LFM_2020, aes(x = collection_date, y = meanLFM, color = 
 
 ## change date in filename each time
 
-ggsave(plot = LFM2022_big, filename = "Figures/LFM_2021_04_15_Big.png", height = 8.5, width = 11, units = "in", dpi = 300)
-ggsave(plot = LFM2022_small, filename = "Figures/LFM_2021_04_15_Small.png", height = 4, width = 6, units = "in", dpi = 300)
+ggsave(plot = LFM2022_big, filename = "Figures/LFM_2023_11_07_Big.png", height = 8.5, width = 11, units = "in", dpi = 300)
+ggsave(plot = LFM2022_small, filename = "Figures/LFM_2023_10_07_Small.png", height = 4, width = 6, units = "in", dpi = 300)
 
 
 ```
