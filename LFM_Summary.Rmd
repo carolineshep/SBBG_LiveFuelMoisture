@@ -9,6 +9,7 @@ editor_options:
 
 ```{r setup, include=FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+#attach packages
 library(tidyverse)
 library(plotrix)
 library(reactable)
