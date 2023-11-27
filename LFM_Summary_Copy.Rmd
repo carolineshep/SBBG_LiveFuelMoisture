@@ -1,24 +1,14 @@
 ---
 title: "Simple LFM Graphs"
-author: "Josie Lesage, updated by Caroline Shepherd"
-date: "11/14/2023"
+author: "Josie Lesage"
+date: "7/16/2020"
 output: html_document
 editor_options: 
-  chunk_output_type: console
-    theme: cerulean
-    code_folding: hide
-    highlight: monochrome
-    toc: yes
-    toc_depth: 5
-    toc_float: yes
-    collapsed: yes
-    smooth_scroll: yes
-    number_sections: no
-editor_options:
   chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE, warning=FALSE}
+
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(plotrix)
@@ -27,6 +17,7 @@ library(gridExtra)
 library(lubridate)
 library(here)
 library(janitor)
+
 
 ```
 
@@ -39,44 +30,43 @@ Data is typically collected every two weeks from each site. Samples are collecte
 In the near future, we hope to show conditions near the Garden (in Mission Canyon) and near St. Mary's. 
 
 ```{r data, include=FALSE, echo=FALSE}
-#this section of code reads in the data and cleans it up
-
 lfm_raw <- read.csv(here("LFM_PaintedCave_data.csv")) %>%
   clean_names() %>% 
-  mutate(lfm = as.numeric(lfm)) %>% 
-  mutate(lfm = lfm*100,
+  mutate(#lfm = (lfm*100),
          species = recode_factor(species,
                                  "ADFA" = "Chamise",
                                  "CEME" = "Bigpod ceanothus")) %>%
-  mutate(collection_date2 = ymd(collection_date)) %>%
-  mutate(recode_factor(subsite, "Unknown" = ""))
+  mutate(collection_date2 = mdy(collection_date)) %>%
+  mutate(recode_factor(subsite, "Unknown" = "")) %>% 
+  mutate(collection_date_tidy = as.Date(collection_date, format = "%m/%d/%Y"))
+
+lfm_raw$lfm <- as.numeric(lfm_raw$lfm)*100
 
 lfm <- lfm_raw %>%
   filter(concern != "Yes",
-         species != "QUAG") %>% # removing any entries that are marked with "concern" and oaks - will analyze oaks later
+         species != "QUAG") %>%
   group_by(collection_date, site, species, subsite) %>%
-  summarise(meanLFM = mean(lfm), # summary statistics for mean and std deviation
+  summarise(meanLFM = mean(lfm),
             seLFM = std.error(lfm)) %>%
   mutate(site2 = site,
          species2 = species) %>%
-  unite(site2, species2, col = "ID", sep = " - ") # creating new column with ID
-
+  unite(site2, species2, col = "ID", sep = " - ")
 ```
 
 # Current conditions 
 Here are the current conditions at Painted Cave. At some sites, only one sample is collected and there are no error bars. For sites with error bars, these represent the standard error.
 
-```{r Graph of 2021 conditions, include = FALSE}
+```{r Graph of current conditions}
 LFM_2020 <- lfm %>%
-  separate(collection_date, sep = "-", into = c("year", "month", "day")) %>%
+  separate(collection_date, sep = "/", into = c("day", "month", "year")) %>%
   filter(year == "2020" | year == "2021",
          site == "Painted Cave") %>%
-  unite(collection_date, "year", "month", "day", sep = "-") 
+  unite(collection_date, "year", "month", "day", sep = "/") 
         
 ggplot(LFM_2020, aes(x = collection_date, y = meanLFM, color = subsite, group = (subsite))) +
-  geom_point(size = 3) +
+  geom_point(aes(shape = species), size = 3) +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
-  geom_line(size = 1) +
+  geom_line(size = 1, aes(linetype = species)) +
   labs(x = "Collection date",
        y = "Live Fuel Mositure Content (%)",
        title = "Live Fuel Moisture Conditions") +
@@ -96,20 +86,14 @@ LFM_summary <- LFM_2020 %>%
   spread(collection_date, lfm)
 )
 
-```
-
-
-```{r Graph of current conditions, include = TRUE}
-
-# recreating above code for 2022-2023
-
+# recreating this for 2022-2023
 LFM_2023 <- lfm %>%
   separate(collection_date, sep = "-", into = c("year", "month", "day")) %>%
-  filter(year == "2023" | year == "2022",
+  filter(year == "2023",
          site == "Painted Cave") %>%
   unite(collection_date, "year", "month", "day", sep = "-")
         
-lfm2023_big <- ggplot(LFM_2023, aes(x = collection_date, y = meanLFM, color = subsite, group = (subsite))) +
+ggplot(LFM_2023, aes(x = collection_date, y = meanLFM, color = subsite, group = (subsite))) +
   geom_point(size = 3) +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
   geom_line(size = 1) +
@@ -132,9 +116,7 @@ LFM_summary <- LFM_2023 %>%
   spread(collection_date, lfm)
 )
 
-ggsave(plot = lfm2023_big, filename = "Figures/lfm2023_big.png", height = 8.5, width = 11, units = "in", dpi = 300)
 
-lfm2023_big # showing graph in html by calling it here
 
 ```
 
@@ -153,7 +135,8 @@ LFM_pre_2021 <- lfm_raw %>%
   group_by(site, subsite, species, month) %>%
   summarise(meanLFM = mean(lfm),
             seLFM = std.error(lfm)) %>%
-  mutate(time = "Historical Mean (2013-2021)")
+  mutate(time = "Historical Mean (2013-2021)") %>% 
+  unite(subsite, time, col = "ID", sep = " ")
 
 LFM_2022 <- lfm_raw %>%
   filter(concern != "Yes",
@@ -161,7 +144,7 @@ LFM_2022 <- lfm_raw %>%
          species != "QUAG", 
          site == "Painted Cave") %>%
   separate(collection_date, sep = "-", into = c("year", "month", "day")) %>%
-  filter(year == "2022"| year == "2023") %>%
+  filter(year == "2022") %>%
   group_by(site, subsite, species, month) %>%
   summarise(meanLFM = mean(lfm),
             seLFM = std.error(lfm)) %>%
@@ -176,12 +159,8 @@ LFM_comp <- bind_rows(LFM_pre_2021, LFM_2022) %>%
          time2 = time) %>%
   unite(subsite2, time2, col = "ID", sep = " ")
   
-
-# THE PROBLEM IS HERE
-LFM_comp_graph <- ggplot() +
-  geom_line(LFM_comp, aes(x = month, y = meanLFM, color = ID, group = ID)) +
-  geom_line(LFM_2022, aes(x = month, y = meanLFM, color = subsite)) +
-  geom_point(aes(color = ID)) +
+LFM_comp_graph <- ggplot(LFM_pre_2021, aes(x = month, y = meanLFM, color = ID, group = ID)) +
+  geom_point() +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
   geom_line(size = 1, aes(group = ID, color = ID)) +
   labs(x = "Collection month",
@@ -203,13 +182,13 @@ LFM_allyears <- lfm_raw %>%
          site != "Montecito Fire",
          site != "Tunnel Road",
          site != "St Mary's") %>%
-  separate(collection_date, sep = "-", into = c("year", "month", "day")) %>%
+  separate(collection_date, sep = "/", into = c("month", "day", "year")) %>%
   group_by(species, year, month, subsite) %>%
   summarise(meanLFM = mean(lfm),
             seLFM = std.error(lfm)) 
 
 LFM_all_graph <- ggplot(LFM_allyears, aes(x = month, y = meanLFM, color = year, group = year)) +
-  geom_point() +
+  geom_point(aes(shape = subsite), size = 3) +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
   geom_line(size = 1, aes(color = year)) +
   labs(x = "Collection date",
@@ -239,7 +218,7 @@ LFM_hist <- lfm_raw %>%
   separate(collection_date, sep = "-", into = c("year", "month", "day")) %>%
   mutate(month1 = month(ymd(collection_date2), label = TRUE, abbr = FALSE)) %>%
   group_by(site, species, month1) %>%
-  summarise(meanLFM = mean(lfm, na.rm=TRUE),
+  summarise(meanLFM = mean(lfm),
             seLFM = std.error(lfm)) %>%
   unite(site, species, col = "ID", sep = " - ") %>%
   mutate(ID = as.factor(ID), 
@@ -259,6 +238,7 @@ LFMHist_big <- ggplot(LFM_hist, aes(x = month1, y = meanLFM, color = ID)) +
        color = "Site and Species",
        title = "Average historical fuel moisture content (per month & species) \n at each collection site") +
   scale_y_continuous(limits = c(45,140), expand = c(0,0), breaks=seq (0,200,10)) +
+  scale_shape_manual(values = c(15, 16, 17, 23)) +
   scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956", "lightgreen")) +
   scale_x_discrete(limits = c("June", "July", "August", "September", "October", "November", "December", "January", "February", "March", "April", "May")) +
   theme_bw() +
@@ -293,52 +273,8 @@ LFMHist_small <- ggplot(LFM_hist, aes(x = month1, y = meanLFM, color = ID)) +
 LFMHist_small
 LFMHist_big
 
-# graphing only painted cave
-
-LFM_hist_PC <- lfm_raw %>%
-  filter(concern != "Yes",
-         species != "CEBE",
-         species != "QUAG",
-         site != "Montecito Fire",
-         site != "ECC",
-         site != "Tunnel Road",
-         site != "St Mary's") %>%
-  mutate(collection_date2 = collection_date) %>%
-  separate(collection_date, sep = "-", into = c("year", "month", "day")) %>%
-  mutate(month1 = month(ymd(collection_date2), label = TRUE, abbr = FALSE)) %>%
-  group_by(site, species, month1) %>%
-  summarise(meanLFM = mean(lfm, na.rm=TRUE),
-            seLFM = std.error(lfm)) %>%
-  unite(site, species, col = "ID", sep = " - ") %>%
-  mutate(ID = as.factor(ID), 
-    ID = fct_relevel(ID, "Painted Cave - Chamise", 
-                           "St Mary's - Chamise", 
-                           "Painted Cave - Bigpod ceanothus",
-                           "St Mary's - Bigpod ceanothus")) %>%
-  ungroup()
-
-LFMHist_PC <- ggplot(LFM_hist_PC, aes(x = month1, y = meanLFM, color = ID)) +
-  geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
-  geom_line(aes(x = month1, y = meanLFM, group = ID), size = 1.25) +
-  geom_hline(aes(yintercept = 60, color = "60% Critical Threshold"), linetype="dashed", size=1) +
-  labs(x = "",
-       y = "Live Fuel Mositure Content (%)",
-       color = "Site and Species",
-       title = "Average historical fuel moisture content (per month & species) \n at each collection site") +
-  scale_y_continuous(limits = c(45,140), expand = c(0,0), breaks=seq (0,200,10)) +
-  scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956", "lightgreen")) +
-  scale_x_discrete(limits = c("June", "July", "August", "September", "October", "November", "December", "January", "February", "March", "April", "May")) +
-  theme_bw() +
-  theme(strip.background = element_blank(),
-        legend.background = element_blank(),
-        text = element_text(size = 16, color = "black"),
-        axis.text = element_text(size = 14, color = "black"),
-        legend.text = element_text(size = 12, margin = margin(t = 5)),
-        axis.text.x = element_text(angle = -45, vjust = 0.4, hjust = 0.1))
-
 ggsave(plot = LFMHist_big, filename = "Figures/LFM_Hist_Big.png", height = 8.5, width = 11, units = "in", dpi = 300)
 ggsave(plot = LFMHist_small, filename = "Figures/LFM_Hist_Small.png", height = 4, width = 6, units = "in", dpi = 300)
-ggsave(plot = LFMHist_PC, filename = "Figures/LFM_Hist_PC.png", height = 8.5, width = 11, units = "in", dpi = 300)
 
 ```
 
@@ -354,8 +290,8 @@ LFM_2022 <- lfm_raw %>%
   group_by(site, species, collection_date) %>%
   summarise(meanLFM = mean(lfm),
             seLFM = std.error(lfm)) %>%
-  mutate(time = "2023",
-         collection_date = as_date(collection_date))%>%
+  mutate(time = "2022",
+         collection_date = as_date(mdy(collection_date)))%>%
   unite(site, species, col = "ID", sep = " - ") %>%
   mutate(ID = as.factor(ID), 
     ID = fct_relevel(ID, "Painted Cave - Chamise", 
@@ -375,7 +311,7 @@ LFM2022_big <- ggplot(LFM_2020, aes(x = collection_date, y = meanLFM, color = ID
   scale_y_continuous(limits = c(45,130), expand = c(0,0), breaks=seq (0,200,10)) +
   scale_shape_manual(values = c(15, 16, 17, 23)) +
   scale_colour_manual(values = c("red", "#4b721d", "#cc6600", "#d3e27c", "#ce9956")) +
-  scale_x_date(limits = c(min_2022_date, max_2022_date), breaks = "1 month", minor_breaks = NULL, date_labels = "%B", expand = c(0,0)) +
+ scale_x_date(breaks = "1 month", minor_breaks = "1 week", labels=date_format("%B")) +
   theme_bw() +
   theme(strip.background = element_blank(),
         legend.background = element_blank(),
@@ -406,8 +342,8 @@ LFM2022_small <- ggplot(LFM_2020, aes(x = collection_date, y = meanLFM, color = 
 
 ## change date in filename each time
 
-#ggsave(plot = LFM2022_big, filename = "Figures/LFM_2023_11_07_Big.png", height = 8.5, width = 11, units = "in", dpi = 300)
-#ggsave(plot = LFM2022_small, filename = "Figures/LFM_2023_10_07_Small.png", height = 4, width = 6, units = "in", dpi = 300)
+ggsave(plot = LFM2022_big, filename = "Figures/LFM_2023_11_07_Big.png", height = 8.5, width = 11, units = "in", dpi = 300)
+ggsave(plot = LFM2022_small, filename = "Figures/LFM_2023_10_07_Small.png", height = 4, width = 6, units = "in", dpi = 300)
 
 
 ```
