@@ -57,42 +57,14 @@ lfm <- lfm_raw %>%
 Here are the current conditions at Painted Cave. At some sites, only one sample is collected and there are no error bars. For sites with error bars, these represent the standard error.
 
 ```{r Graph of current conditions}
-LFM_2020 <- lfm %>%
-  separate(collection_date, sep = "/", into = c("day", "month", "year")) %>%
-  filter(year == "2020" | year == "2021",
-         site == "Painted Cave") %>%
-  unite(collection_date, "year", "month", "day", sep = "/") 
-        
-ggplot(LFM_2020, aes(x = collection_date, y = meanLFM, color = subsite, group = (subsite))) +
-  geom_point(aes(shape = species), size = 3) +
-  geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
-  geom_line(size = 1, aes(linetype = species)) +
-  labs(x = "Collection date",
-       y = "Live Fuel Mositure Content (%)",
-       title = "Live Fuel Moisture Conditions") +
-  scale_y_continuous(limits = c(0,130), expand = c(0,0), breaks=seq (0,200,10)) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = -90, vjust = 0.25, hjust = 0.25)) +
-  facet_wrap(~species)
-
-reactable(
-LFM_summary <- LFM_2020 %>%
-  group_by(collection_date, species) %>%
-  summarise(stderr = std.error(meanLFM),
-            meanLFM = mean(meanLFM)) %>%
-  mutate_if(is.numeric, round, digits = 2) %>%
-  mutate(lfm = str_c(meanLFM, stderr, sep = " ± ")) %>%
-  select(collection_date, lfm, species) %>%
-  spread(collection_date, lfm)
-)
-
-# recreating this for 2022-2023
+#creating data table of current conditions at PC sites
 LFM_2023 <- lfm %>%
   separate(collection_date, sep = "-", into = c("year", "month", "day")) %>%
   filter(year == "2023",
          site == "Painted Cave") %>%
   unite(collection_date, "year", "month", "day", sep = "-")
-        
+
+#graphing current conditions, not including oaks        
 ggplot(LFM_2023, aes(x = collection_date, y = meanLFM, color = subsite, group = (subsite))) +
   geom_point(size = 3) +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
@@ -104,6 +76,25 @@ ggplot(LFM_2023, aes(x = collection_date, y = meanLFM, color = subsite, group = 
   theme_bw() +
   theme(axis.text.x = element_text(angle = -90, vjust = 0.25, hjust = 0.25)) +
   facet_wrap(~species)
+
+#graphing current conditions, oaks only
+lfm_oak <- lfm_raw %>%
+  filter(concern != "Yes",
+         species == "QUAG",
+         subsite != "SBBG - Tunnel") %>%
+  group_by(collection_date, subsite) %>%
+  summarise(meanLFM = mean(lfm),
+            seLFM = std.error(lfm)) #no standard deviation because there's only one year of data so far, but will need this in the future
+
+ggplot(lfm_oak, aes(x = collection_date, y = meanLFM, color = subsite)) +
+  geom_point(size = 3) +
+  geom_line(size = 1) +
+  labs(x = "Collection Date",
+       y = "Live Fuel Moisture Content (%)",
+       title = "Live Fuel Moisture Conditions in Quercus Agrifolia on Painted Cave Road") +
+  scale_y_continuous(limits = c(0,190), expand = c(0,0), breaks=seq (0,200,10)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = -90, vjust = 0.25, hjust = 0.25))
 
 reactable(
 LFM_summary <- LFM_2023 %>%
@@ -117,91 +108,40 @@ LFM_summary <- LFM_2023 %>%
 )
 
 
-
 ```
 
 # Historical data
 We'd also like to know how current conditions compare with past data, we we'll summarize average monthly LFM for the past few years, and then will compare that line to this year's data.
 
 ```{r historical comparison}
-# comparing pre-2022 avg to 2022
-LFM_pre_2021 <- lfm_raw %>%
+#comparing data for all sites from 2021-2022. Hard to include 2023 because the wet year makes the error bars so high
+LFM_pre_2023 <- lfm_raw %>%
   filter(concern != "Yes", 
          species != "CEBE",
          species != "QUAG", 
          site == "Painted Cave") %>%
   separate(collection_date, sep = "-", into = c("year", "month", "day")) %>%
-  filter(year <= "2021") %>%
+  filter(year == "2021" | year == "2022") %>%
   group_by(site, subsite, species, month) %>%
   summarise(meanLFM = mean(lfm),
             seLFM = std.error(lfm)) %>%
-  mutate(time = "Historical Mean (2013-2021)") %>% 
+  mutate(time = "mean LFM 2021-2022") %>% 
   unite(subsite, time, col = "ID", sep = " ")
 
-LFM_2022 <- lfm_raw %>%
-  filter(concern != "Yes",
-         species != "CEBE",
-         species != "QUAG", 
-         site == "Painted Cave") %>%
-  separate(collection_date, sep = "-", into = c("year", "month", "day")) %>%
-  filter(year == "2022") %>%
-  group_by(site, subsite, species, month) %>%
-  summarise(meanLFM = mean(lfm),
-            seLFM = std.error(lfm)) %>%
-  mutate(time = "2022")
 
-LFM_comp <- bind_rows(LFM_pre_2021, LFM_2022) %>%
-  ungroup() %>%
-  mutate(subsite = fct_recode(subsite, "PC - Laurel Spring" = "PC - LS"),
-         site2 = site,
-         subsite2 = subsite,
-         species2 = species,
-         time2 = time) %>%
-  unite(subsite2, time2, col = "ID", sep = " ")
-  
-LFM_comp_graph <- ggplot(LFM_pre_2021, aes(x = month, y = meanLFM, color = ID, group = ID)) +
+#plotting 2021-2022 data (mean lfm per month)
+ggplot(LFM_pre_2023, aes(x = month, y = meanLFM, color = ID, group = ID)) +
   geom_point() +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
   geom_line(size = 1, aes(group = ID, color = ID)) +
   labs(x = "Collection month",
        y = "Live Fuel Mositure Content (%)",
-       title = "Live Fuel Moisture Conditions at Painted Cave") +
+       title = "Live Fuel Moisture Conditions at Painted Cave (average monthly value 2021-2022)") +
   scale_y_continuous(limits = c(45,140), expand = c(0,0), breaks=seq (0,200,10)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = -45, vjust = -0.5, hjust = 0.5)) +
   facet_wrap(~species)
 
-LFM_comp_graph  
-
-## comparing all years individually 
-LFM_allyears <- lfm_raw %>%
-  filter(concern != "Yes",
-         species != "CEBE",
-         species != "QUAG", 
-         species != "CECRA",
-         site != "Montecito Fire",
-         site != "Tunnel Road",
-         site != "St Mary's") %>%
-  separate(collection_date, sep = "/", into = c("month", "day", "year")) %>%
-  group_by(species, year, month, subsite) %>%
-  summarise(meanLFM = mean(lfm),
-            seLFM = std.error(lfm)) 
-
-LFM_all_graph <- ggplot(LFM_allyears, aes(x = month, y = meanLFM, color = year, group = year)) +
-  geom_point(aes(shape = subsite), size = 3) +
-  geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
-  geom_line(size = 1, aes(color = year)) +
-  labs(x = "Collection date",
-       y = "Live Fuel Mositure Content (%)",
-       title = "Live Fuel Moisture Conditions at Painted Cave") +
-  scale_y_continuous(limits = c(45,160), expand = c(0,0), breaks=seq (0,200,10)) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = -45, vjust = -0.5, hjust = 0.5)) +
-  facet_wrap(~species)
-
-LFM_all_graph
-
-# grid.arrange(LFM_comp_graph, LFM_all_graph)
 
 ```
 
