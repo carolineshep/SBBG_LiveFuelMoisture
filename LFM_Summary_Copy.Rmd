@@ -68,7 +68,7 @@ LFM_2023 <- lfm %>%
 ggplot(LFM_2023, aes(x = collection_date, y = meanLFM, color = subsite, group = (subsite))) +
   geom_point(size = 3) +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
-  geom_line(size = 1) +
+  geom_line(linewidth = 1) +
   labs(x = "Collection Date",
        y = "Live Fuel Mositure Content (%)",
        title = "Live Fuel Moisture Conditions") +
@@ -88,10 +88,11 @@ lfm_oak <- lfm_raw %>%
 
 ggplot(lfm_oak, aes(x = collection_date, y = meanLFM, color = subsite)) +
   geom_point(size = 3) +
-  geom_line(size = 1) +
+   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
+  geom_line(data = lfm_oak, aes(x = collection_date, y = meanLFM, color = subsite), linewidth = 1) +
   labs(x = "Collection Date",
        y = "Live Fuel Moisture Content (%)",
-       title = "Live Fuel Moisture Conditions in Quercus Agrifolia on Painted Cave Road") +
+       title = "Live Fuel Moisture Conditions in Quercus agrifolia on Painted Cave Road") +
   scale_y_continuous(limits = c(0,190), expand = c(0,0), breaks=seq (0,200,10)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = -90, vjust = 0.25, hjust = 0.25))
