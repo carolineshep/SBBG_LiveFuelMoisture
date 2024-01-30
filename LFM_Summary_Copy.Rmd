@@ -60,8 +60,9 @@ Here are the current conditions at Painted Cave. At some sites, only one sample 
 #creating data table of current conditions at PC sites
 LFM_2023 <- lfm %>%
   separate(collection_date, sep = "-", into = c("year", "month", "day")) %>%
-  filter(year == "2023",
-         site == "Painted Cave") %>%
+  filter(year == "2023" | year == "2024",
+         site == "Painted Cave",
+         subsite == "PC - Lower Loop" | subsite == "PC - BP @ Oak #2") %>% 
   unite(collection_date, "year", "month", "day", sep = "-")
 
 #graphing current conditions, not including oaks        
@@ -75,7 +76,8 @@ ggplot(LFM_2023, aes(x = collection_date, y = meanLFM, color = subsite, group = 
   scale_y_continuous(limits = c(0,190), expand = c(0,0), breaks=seq (0,200,10)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = -90, vjust = 0.25, hjust = 0.25)) +
-  facet_wrap(~species)
+  facet_wrap(~species)+
+  scale_colour_manual(values = c("darkgreen", "#cc6600"))
 
 #graphing current conditions, oaks only
 lfm_oak <- lfm_raw %>%
@@ -93,9 +95,10 @@ ggplot(lfm_oak, aes(x = collection_date, y = meanLFM, color = subsite)) +
   labs(x = "Collection Date",
        y = "Live Fuel Moisture Content (%)",
        title = "Live Fuel Moisture Conditions in Quercus agrifolia on Painted Cave Road") +
-  scale_y_continuous(limits = c(0,190), expand = c(0,0), breaks=seq (0,200,10)) +
+  scale_y_continuous(limits = c(0,140), expand = c(0,0), breaks=seq (0,140,10)) +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = -90, vjust = 0.25, hjust = 0.25))
+  theme(axis.text.x = element_text(angle = -90, vjust = 0.25, hjust = 0.25)) +
+  scale_colour_manual(values = c("darkred", "#8A9A5B", "#cc6600", "darkgreen", "#E8DE2A"))
 
 reactable(
 LFM_summary <- LFM_2023 %>%
