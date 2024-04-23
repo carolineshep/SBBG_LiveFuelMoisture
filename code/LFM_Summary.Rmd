@@ -47,6 +47,7 @@ LFM <- LFM_raw %>%
   mutate(Site2 = Site,
          Species2 = Species) %>%
   unite(Site2, Species2, col = "ID", sep = " - ")
+#test
 ```
 
 # Current conditions 
