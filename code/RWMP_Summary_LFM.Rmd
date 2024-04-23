@@ -26,19 +26,35 @@ Data is typically collected every two weeks from each site. Samples are collecte
 
 ```{r data, include=FALSE, echo=FALSE}
 
+#reading in data, cleaning it
 rwmp_raw <- read.csv(here("data", "LFM_PaintedCave_data_042024.csv")) %>%
   clean_names() %>% 
   mutate(species = recode_factor(species,
                                  "ADFA" = "Chamise",
                                  "CEME" = "Bigpod ceanothus")) %>%
-  mutate(recode_factor(subsite, "Unknown" = "")) 
+  mutate(recode_factor(subsite, "Unknown" = ""))
 
-lfm_raw$lfm <- as.numeric(lfm_raw$lfm)*100
+#changing "collection date" column to date class in new column, "date"
+rwmp_raw$date <- parse_date_time(rwmp_raw$collection_date, "ymd")
 
-lfm <- lfm_raw %>%
-  filter(concern != "Yes",
-         species != "QUAG") %>%
-  group_by(collection_date, site, species, subsite) %>%
+#checking to see if lubridate worked (it did)
+class(rwmp_raw$date)
+
+#checking class of lfm bc it needs to be number for analysis
+class(rwmp_raw$lfm_perc)
+class(rwmp_raw$lfm)
+
+#changing class
+rwmp_raw$lfm_perc <- as.numeric(rwmp_raw$lfm_perc)
+
+#check to see if it worked 
+class(rwmp_raw$lfm_perc)
+#it did! class is now "numeric"
+
+#creating new filtered dataframe with mean LFM values and new site column
+lfm <- rwmp_raw %>%
+  filter(concern != "Yes") %>%
+  group_by(date, site, species, subsite) %>%
   summarise(meanLFM = mean(lfm),
             seLFM = std.error(lfm)) %>%
   mutate(site2 = site,
@@ -48,4 +64,65 @@ lfm <- lfm_raw %>%
 ```
 
 # Current conditions 
-Here are the current conditions at Painted Cave. At some sites, only one sample is collected and there are no error bars. For sites with error bars, these represent the standard error.
+Here are the current conditions along Painted Cave Road
+
+```{r Graph of current conditions}
+#creating data table of current conditions at PC sites
+lfm2023 <- lfm %>%
+  separate(date, sep = "-", into = c("year", "month", "day")) %>%
+  filter(year == "2023" | year == "2024",
+         site == "Painted Cave",
+         subsite == "PC - Lower Loop" | subsite == "PC - BP @ Oak #2") %>% 
+  unite(collection_date, "year", "month", "day", sep = "-")
+
+lfm2023 <- lfm %>% 
+  filter(year == "2023",
+         year == "2024")
+
+#graphing current conditions, not including oaks        
+ggplot(LFM_2023, aes(x = collection_date, y = meanLFM, color = subsite, group = (subsite))) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
+  geom_line(linewidth = 1) +
+  labs(x = "Collection Date",
+       y = "Live Fuel Mositure Content (%)",
+       title = "Live Fuel Moisture Conditions") +
+  scale_y_continuous(limits = c(0,190), expand = c(0,0), breaks=seq (0,200,10)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = -90, vjust = 0.25, hjust = 0.25)) +
+  facet_wrap(~species)+
+  scale_colour_manual(values = c("darkgreen", "#cc6600"))
+
+#graphing current conditions, oaks only
+lfm_oak <- lfm_raw %>%
+  filter(concern != "Yes",
+         species == "QUAG",
+         subsite != "SBBG - Tunnel") %>%
+  group_by(collection_date, subsite) %>%
+  summarise(meanLFM = mean(lfm)) #no standard deviation because there's only one year of data so far, but will need this in the future
+
+ggplot(lfm_oak, aes(x = collection_date, y = meanLFM, color = subsite)) +
+  geom_point(size = 3) +
+   geom_errorbar(aes(ymin = meanLFM, ymax = meanLFM, width = 0.2), size = 1) +
+  geom_line(data = lfm_oak, aes(x = collection_date, y = meanLFM, color = subsite), linewidth = 1) +
+  labs(x = "Collection Date",
+       y = "Live Fuel Moisture Content (%)",
+       title = "Live Fuel Moisture Conditions in Quercus agrifolia on Painted Cave Road") +
+  scale_y_continuous(limits = c(35,175), expand = c(0,0), breaks=seq (0,175,10)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = -90, vjust = 0.25, hjust = 0.25)) +
+  scale_colour_manual(values = c("darkred", "#8A9A5B", "#cc6600", "darkgreen", "#E8DE2A"))
+
+reactable(
+LFM_summary <- LFM_2023 %>%
+  group_by(collection_date, species) %>%
+  summarise(stderr = std.error(meanLFM),
+            meanLFM = mean(meanLFM)) %>%
+  mutate_if(is.numeric, round, digits = 2) %>%
+  mutate(lfm = str_c(meanLFM, stderr, sep = " ± ")) %>%
+  select(collection_date, lfm, species) %>%
+  spread(collection_date, lfm)
+)
+
+
+```
