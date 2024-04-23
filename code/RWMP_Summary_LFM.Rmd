@@ -1,0 +1,51 @@
+---
+title: "RWMP Summary"
+author: "Caroline Shepherd"
+date: "2024-04-23"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(plotrix)
+library(reactable)
+library(gridExtra)
+library(lubridate)
+library(here)
+library(janitor)
+
+```
+
+# Introduction
+
+This code is meant to produce a simple graph of LFM at sites near the Santa Barbara Botanic Garden to raise awareness of fire danger and keep local residents informed.  
+
+Data is typically collected every two weeks from each site. Samples are collected and dried in accordance with USFS recommendations. This code has been forked and altered from Josie Lesage's original code, as data has been updated and changed.
+
+```{r data, include=FALSE, echo=FALSE}
+
+rwmp_raw <- read.csv(here("data", "LFM_PaintedCave_data_042024.csv")) %>%
+  clean_names() %>% 
+  mutate(species = recode_factor(species,
+                                 "ADFA" = "Chamise",
+                                 "CEME" = "Bigpod ceanothus")) %>%
+  mutate(recode_factor(subsite, "Unknown" = "")) 
+
+lfm_raw$lfm <- as.numeric(lfm_raw$lfm)*100
+
+lfm <- lfm_raw %>%
+  filter(concern != "Yes",
+         species != "QUAG") %>%
+  group_by(collection_date, site, species, subsite) %>%
+  summarise(meanLFM = mean(lfm),
+            seLFM = std.error(lfm)) %>%
+  mutate(site2 = site,
+         species2 = species) %>%
+  unite(site2, species2, col = "ID", sep = " - ")
+
+```
+
+# Current conditions 
+Here are the current conditions at Painted Cave. At some sites, only one sample is collected and there are no error bars. For sites with error bars, these represent the standard error.
