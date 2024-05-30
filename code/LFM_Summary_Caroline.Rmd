@@ -2,8 +2,18 @@
 title: "Simple LFM Graphs"
 author: "Josie Lesage"
 date: "7/16/2020"
-output: html_document
-editor_options: 
+output:
+  html_document:
+    theme: cerulean
+    code_folding: hide
+    highlight: monochrome
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
+    collapsed: yes
+    smooth_scroll: yes
+    number_sections: no
+editor_options:
   chunk_output_type: console
 ---
 
