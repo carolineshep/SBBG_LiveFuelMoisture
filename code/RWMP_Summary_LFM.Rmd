@@ -16,6 +16,7 @@ library(lubridate)
 library(here)
 library(janitor)
 
+# packages installed
 ```
 
 # Introduction
