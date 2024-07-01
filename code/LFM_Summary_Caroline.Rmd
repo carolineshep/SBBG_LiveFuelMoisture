@@ -95,7 +95,7 @@ lfm_oak <- lfm_raw %>%
   filter(concern != "Yes",
          species == "QUAG",
          subsite != "SBBG - Tunnel") %>%
-  group_by(collection_date, subsite) %>%
+  group_by(collection_date, subsite) %>% 
   summarise(meanLFM = mean(lfm)) #no standard deviation because there's only one year of data so far, but will need this in the future
 
 ggplot(lfm_oak, aes(x = collection_date, y = meanLFM, color = subsite)) +
