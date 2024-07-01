@@ -19,6 +19,7 @@ editor_options:
 
 ```{r setup, include=FALSE, warning=FALSE}
 
+# load packages needed
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(plotrix)
@@ -38,27 +39,29 @@ This code is meant to produce a simple graph of LFM at sites near the Santa Barb
 Data is typically collected every two weeks from each site. Samples are collected and dried in accordance with USFS recommendations. This code has been forked and altered from Josie Lesage's original code, as data has been updated and changed.
 
 ```{r data, include=FALSE, echo=FALSE}
-lfm_raw <- read.csv(here("data", "LFM_PaintedCave_data_042024.csv")) %>%
-  clean_names() %>% 
-  mutate(#lfm = (lfm*100),
-         species = recode_factor(species,
+
+#read in data from csv file located in "data" folder
+#use the most updated data file (indicated by date in the name of the file)
+lfm_raw <- read.csv(here("data", "LFM_PaintedCave_data_072024.csv")) %>%
+  clean_names() %>%  # this cleans up the data and column names
+  mutate(species = recode_factor(species, #mutate lets you change column names - in this case I'm editing plant names
                                  "ADFA" = "Chamise",
                                  "CEME" = "Bigpod ceanothus")) %>%
-  mutate(collection_date2 = mdy(collection_date)) %>%
-  mutate(recode_factor(subsite, "Unknown" = "")) %>% 
-  mutate(collection_date_tidy = as.Date(collection_date, format = "%m/%d/%Y"))
+  mutate(collection_date2 = mdy(collection_date)) %>% # changing the date column to date format 
+  mutate(recode_factor(subsite, "Unknown" = "")) %>% # getting rid of "unknown" subsites
+  mutate(collection_date_tidy = as.Date(collection_date, format = "%m/%d/%Y")) # putting the date into m/d/y format
 
-lfm_raw$lfm <- as.numeric(lfm_raw$lfm)*100
+lfm_raw$lfm <- as.numeric(lfm_raw$lfm)*100 #making sure lfm is a numeric character so we can perform analysis on it. If it's in a class character or anything other them numeric, then R doesn't know you can do math with it
 
-lfm <- lfm_raw %>%
+lfm <- lfm_raw %>% # now I'm making the dataset we'll work with 
   filter(concern != "Yes",
-         species != "QUAG") %>%
-  group_by(collection_date, site, species, subsite) %>%
-  summarise(meanLFM = mean(lfm),
+         species != "QUAG") %>% # getting rid of any data points with "concern" or any oak points. I'll make an oak dataset later.
+  group_by(collection_date, site, species, subsite) %>% #group by these subgroup options
+  summarise(meanLFM = mean(lfm), # find the mean LFM, and standard deviation if there is more than one data point in a month. It takes an average of data points, and this tells you how different the data point were. THe smaller the bars, the more consistent the data is. The bigger the bars, the more the data fluctuated
             seLFM = std.error(lfm)) %>%
-  mutate(site2 = site,
+  mutate(site2 = site, # renaming site names. I forget why.
          species2 = species) %>%
-  unite(site2, species2, col = "ID", sep = " - ")
+  unite(site2, species2, col = "ID", sep = " - ") #OH! It was because we need to combine site and species into one column, but I wanted to keep the original site and species columns too
 ```
 
 # Current conditions 
@@ -66,26 +69,26 @@ Here are the current conditions at Painted Cave. At some sites, only one sample 
 
 ```{r Graph of current conditions}
 #creating data table of current conditions at PC sites
-LFM_2023 <- lfm %>%
-  separate(collection_date, sep = "-", into = c("year", "month", "day")) %>%
-  filter(year == "2023" | year == "2024",
-         site == "Painted Cave",
+LFM_2024 <- lfm %>% #making a subset of data for 2024 (this is where I work with the most recent data we have)
+  separate(collection_date, sep = "-", into = c("year", "month", "day")) %>% #I'm separating the data in the collection date column so that I can filter by year. I'm separating the column everywhere there is a dash "-" and it creates 3 columns from the one date column 
+  filter(year == "2024", #only including recent data
+         site == "Painted Cave", #only care about Painted Cave these days
          subsite == "PC - Lower Loop" | subsite == "PC - BP @ Oak #2") %>% 
-  unite(collection_date, "year", "month", "day", sep = "-")
+  unite(collection_date, "year", "month", "day", sep = "-") #Reuniting collection date column now that I'm done working with it
 
 #graphing current conditions, not including oaks        
-ggplot(LFM_2023, aes(x = collection_date, y = meanLFM, color = subsite, group = (subsite))) +
+ggplot(LFM_2024, aes(x = collection_date, y = meanLFM, color = subsite, group = (subsite))) +
   geom_point(size = 3) +
-  geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) +
+  geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM, width = 0.2), size = 1) + #adding the standard deviation error bars
   geom_line(linewidth = 1) +
   labs(x = "Collection Date",
        y = "Live Fuel Mositure Content (%)",
        title = "Live Fuel Moisture Conditions") +
-  scale_y_continuous(limits = c(0,190), expand = c(0,0), breaks=seq (0,200,10)) +
-  theme_bw() +
+  scale_y_continuous(limits = c(0,190), expand = c(0,0), breaks=seq (0,200,10)) + #manually deciding the y axis tick marks
+  theme_bw() + #this is a random theme that I like
   theme(axis.text.x = element_text(angle = -90, vjust = 0.25, hjust = 0.25)) +
-  facet_wrap(~species)+
-  scale_colour_manual(values = c("darkgreen", "#cc6600"))
+  facet_wrap(~species)+ # I forget what this means
+  scale_colour_manual(values = c("darkgreen", "#cc6600")) # choosing the colors manually
 
 #graphing current conditions, oaks only
 lfm_oak <- lfm_raw %>%
@@ -108,7 +111,7 @@ ggplot(lfm_oak, aes(x = collection_date, y = meanLFM, color = subsite)) +
   scale_colour_manual(values = c("darkred", "#8A9A5B", "#cc6600", "darkgreen", "#E8DE2A"))
 
 reactable(
-LFM_summary <- LFM_2023 %>%
+LFM_summary <- LFM_2024 %>%
   group_by(collection_date, species) %>%
   summarise(stderr = std.error(meanLFM),
             meanLFM = mean(meanLFM)) %>%
@@ -252,7 +255,7 @@ LFM_2022 <- lfm_raw %>%
 min_2022_date <- as_date(ymd("2022-05-30"))
 max_2022_date <- as_date(ymd("2023-05-30"))
 
-LFM2022_big <- ggplot(LFM_2020, aes(x = collection_date, y = meanLFM, color = ID)) +
+LFM2022_big <- ggplot(LFM_2022, aes(x = collection_date, y = meanLFM, color = ID)) +
   geom_errorbar(aes(ymin = meanLFM-seLFM, ymax = meanLFM+seLFM), width = 7, size = 1) +
   geom_line(aes(x = collection_date, y = meanLFM, group = ID), size = 1.25) +
   geom_hline(aes(yintercept = 60, color = "60% Critical Threshold \n"), linetype="dashed", size=1) +
