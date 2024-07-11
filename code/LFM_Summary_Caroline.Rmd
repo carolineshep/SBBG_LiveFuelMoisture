@@ -88,7 +88,7 @@ ggplot(LFM_2024, aes(x = collection_date, y = meanLFM, color = subsite, group = 
   geom_line(linewidth = 1) +
   labs(x = "Collection Date",
        y = "Live Fuel Mositure Content (%)",
-       title = "Live Fuel Moisture Conditions") +
+       title = "Live Fuel Moisture Conditions in Chamise and Big Pod Ceanothus") +
   scale_y_continuous(limits = c(0,190), expand = c(0,0), breaks=seq (0,200,10)) + #manually deciding the y axis tick marks
   theme_bw() + #this is a random theme that I like
   theme(axis.text.x = element_text(angle = -90, vjust = 0.25, hjust = 0.25)) +
